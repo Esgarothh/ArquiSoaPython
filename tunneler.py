@@ -6,8 +6,8 @@ local_port = 5000
 
 remote_host = '200.14.84.16'
 remote_port = 5000
-
-ssh_username = 'YOUR_USER'
+user = input("your user:")
+ssh_username = user
 ssh_host = '200.14.84.16'
 ssh_port = 8080
 
