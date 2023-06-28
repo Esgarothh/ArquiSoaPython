@@ -1,6 +1,6 @@
-
 import socket
 import threading
+from dbb import BaseDeDatos
 
 
 class SoAService:
@@ -9,7 +9,7 @@ class SoAService:
         self.bus_port = bus_port
         self.service_name = service_name
         self.is_running = False
-
+        self.database = None
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.bus_host, self.bus_port))
 
@@ -20,6 +20,14 @@ class SoAService:
         print("response is", response)
         if response == '00012sinitOK{}'.format(self.service_name):
             self.start_daemon()
+
+    def conectarbase(self):
+        self.database = BaseDeDatos()
+        self.database.connect()
+        datatest = self.database.get_test(123)
+        for row in datatest:
+            print(row)
+        self.database.close()
 
     def _calculate_length(self):
         # Implementa tu lógica para calcular el largo del payload + nombre del servicio
@@ -52,6 +60,8 @@ class SoAService:
         # Implementa tu lógica para procesar la solicitud del bus y generar una respuesta
         # En este ejemplo, asumiremos que la solicitud es una suma de dos números separados por un espacio
         numbers = payload.split()[1:]
+        print("respuesta de base de datos:")
+        self.conectarbase()
         if len(numbers) != 2:
             print(payload)
             return "Invalid request"
@@ -81,7 +91,7 @@ class SoAService:
 
 bus_host = "localhost"
 bus_port = 5000
-service_name = "demen"
+service_name = "demon"
 
 service = SoAService(bus_host, bus_port, service_name)
 service.initialize()
