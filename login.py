@@ -62,3 +62,7 @@ def run_server():
     finally:
         # Close the socket
         sock.close()
+
+
+if __name__ == '__main__':
+    run_server()
