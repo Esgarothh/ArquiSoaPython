@@ -58,7 +58,9 @@ try:
                 med_id = str(med_id[0])[1:-1].replace(",", "")
                 cur.execute("""insert into solicitudes_examenes(medico_id, paciente_id, examen_id) values(%s, %s, %s) """, [med_id, pac_id, examen,])
                 conn.commit()
-                frase = '00022' + 'examr' + ' '+ rut_paciente + ' ' +  'solicitud_creada'
+                tamanio_mensaje = 18 + len(rut_paciente)
+                sizetosend = str(tamanio_mensaje).rjust(5, '0')
+                frase = sizetosend + 'examr' + ' ' + rut_paciente + ' ' +  'solicitud_creada'
                 sock.sendall(frase.encode())
                
 
