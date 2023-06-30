@@ -45,7 +45,7 @@ try:
             if service == servicio:
                 rut_exam = question.rsplit(' ', 1)[0]
                 print(rut_exam)
-                cur.execute("""SELECT paciente_id, examenes.nombre, fecha, detalle FROM resultados_examenes, examenes, usuarios, pacientes WHERE usuarios.id = pacientes.usuario_id and pacientes.id = resultados_examenes.paciente_id and resultados_examenes.examen_id = examenes.id and usuarios.rut = %s """, [rut_exam,]) 
+                cur.execute("""SELECT examenes.nombre, fecha, detalle FROM resultados_examenes, examenes, usuarios, pacientes WHERE usuarios.id = pacientes.usuario_id and pacientes.id = resultados_examenes.paciente_id and resultados_examenes.examen_id = examenes.id and usuarios.rut = %s """, [rut_exam,]) 
                 res = cur.fetchall()
                 if len(res) == 0:
                     tamanio_mensaje= 21 + len(rut_exam)
