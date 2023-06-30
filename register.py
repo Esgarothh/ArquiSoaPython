@@ -54,20 +54,25 @@ class RegisterService:
     def responder_a_bus(self, payload):
         # Implementa tu lógica para procesar la solicitud del bus y generar una respuesta
         # En este ejemplo, asumiremos que la solicitud es un intento de registro
-        credentials = payload.split()
-        if len(credentials) != 2:
+        parameters = payload.split()
+        if len(parameters) != 7:
             return "Invalid request"
 
-        username = credentials[0]
-        password = credentials[1]
+        rut = parameters[0]
+        password = parameters[1]
+        role = parameters[2]
+        email = parameters[3]
+        phone = parameters[4]
+        first_name = parameters[5]
+        last_name = parameters[6]
 
         self.conectarbase()
-        user_data = self.database.get_user_by_username(username)
+        user_data = self.database.get_user_by_rut(rut)
 
         if user_data is not None:
-            return "Username already exists"
+            return "User with RUT already exists"
 
-        self.database.create_user(username, password)
+        self.database.create_user(rut, password, role, email, phone, first_name, last_name)
         self.database.commit()
 
         return "Registration successful"
