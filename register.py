@@ -1,104 +1,83 @@
 import socket
-import threading
-from dbb import BaseDeDatos
+import psycopg2
 
-class RegisterService:
-    def __init__(self, bus_host, bus_port, service_name):
-        self.bus_host = bus_host
-        self.bus_port = bus_port
-        self.service_name = service_name
-        self.is_running = False
-        self.database = None
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((self.bus_host, self.bus_port))
+def register(rut, password, role, email, phone, first_name, last_name):
+    try:
+        conn = psycopg2.connect(user="tu_usuario", password="tu_contraseña", host="localhost", port="5432", database="tu_basededatos")
+        print("Conectado a la base de datos")
+        cur = conn.cursor()
 
-    def initialize(self):
-        length = self._calculate_length()
-        init_string = "{:05d}{}{}".format(length, "sinit", self.service_name)
-        response = self._send_to_bus(init_string)
-        print("response is", response)
-        if response == '00012sinitOK{}'.format(self.service_name):
-            self.start_daemon()
+        # Verificar si el usuario ya existe en la base de datos
+        cur.execute("SELECT rut FROM usuarios WHERE rut = %s", (rut,))
+        result = cur.fetchone()
+        if result is not None:
+            return "El usuario ya existe"
 
-    def conectarbase(self):
-        self.database = BaseDeDatos()
-        self.database.connect()
+        # Insertar el nuevo usuario en la base de datos
+        cur.execute("INSERT INTO usuarios (rut, password, role, email, phone, first_name, last_name) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    (rut, password, role, email, phone, first_name, last_name))
+        conn.commit()
 
-    def _calculate_length(self):
-        # Implementa tu lógica para calcular el largo del payload + nombre del servicio
-        # Aquí asumiremos que el payload y el nombre del servicio son estáticos
-        payload = "example_payload"
-        length = len(payload) + len(self.service_name)
-        return length
+        return "Registro exitoso"
+    except psycopg2.Error as e:
+        print("Error al conectar a la base de datos:", e)
+        return "Error al conectar a la base de datos"
 
-    def _send_to_bus(self, message):
-        self.sock.sendall(message.encode())
-        response = self.sock.recv(1024).decode()
-        return response
+def run_server():
+    # Define the server's address and port
+    server_address = ('localhost', 5000)
 
-    def _handle_message(self, message):
-        length = int(message[:5])
-        expected_length = length + len(self.service_name)
-        if len(message) < expected_length:
-            # Esperar a recibir los caracteres restantes
-            return
+    # Create a TCP socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        print(message)
-        # Procesar el mensaje completo
-        payload = message[5:expected_length]
-        response = self.responder_a_bus(payload)
-        response_string = "{:05d}{}{}".format(
-            len(response), self.service_name, response)
-        self.sock.sendall(response_string.encode())
+    try:
+        # Bind the socket to the server address
+        sock.bind(server_address)
+        print('Servidor iniciado en {}:{}'.format(*server_address))
 
-    def responder_a_bus(self, payload):
-        # Implementa tu lógica para procesar la solicitud del bus y generar una respuesta
-        # En este ejemplo, asumiremos que la solicitud es un intento de registro
-        parameters = payload.split()
-        if len(parameters) != 7:
-            return "Invalid request"
+        # Listen for incoming connections
+        sock.listen(1)
 
-        rut = parameters[0]
-        password = parameters[1]
-        role = parameters[2]
-        email = parameters[3]
-        phone = parameters[4]
-        first_name = parameters[5]
-        last_name = parameters[6]
+        while True:
+            print('Esperando conexión...')
+            connection, client_address = sock.accept()
+            print('Conexión establecida desde', client_address)
 
-        self.conectarbase()
-        user_data = self.database.get_user_by_rut(rut)
+            # Receive the client's request
+            request = connection.recv(1024).decode()
+            print('Received: {}'.format(request))
 
-        if user_data is not None:
-            return "User with RUT already exists"
+            if request.startswith('register'):
+                parameters = request.split(',')
+                if len(parameters) == 7:
+                    rut = parameters[1]
+                    password = parameters[2]
+                    role = parameters[3]
+                    email = parameters[4]
+                    phone = parameters[5]
+                    first_name = parameters[6]
+                    last_name = parameters[7]
+                    print('rut:', rut)
+                    print('password:', password)
+                    print('role:', role)
+                    print('email:', email)
+                    print('phone:', phone)
+                    print('first_name:', first_name)
+                    print('last_name:', last_name)
 
-        self.database.create_user(rut, password, role, email, phone, first_name, last_name)
-        self.database.commit()
+                    # Perform registration
+                    response = register(rut, password, role, email, phone, first_name, last_name)
+                    print('Response:', response)
 
-        return "Registration successful"
+                    # Send the response back to the client
+                    connection.sendall(response.encode())
+                else:
+                    connection.sendall("Parámetros incorrectos".encode())
 
-    def _listen_to_bus(self):
-        while self.is_running:
-            message = self.sock.recv(1024).decode()
-            print("message")
-            self._handle_message(message)
-
-    def start_daemon(self):
-        self.is_running = True
-        thread = threading.Thread(target=self._listen_to_bus)
-        thread.start()
-
-    def stop_daemon(self):
-        self.is_running = False
-
-
-bus_host = "localhost"
-bus_port = 5000
-service_name = "register"
-
-service = RegisterService(bus_host, bus_port, service_name)
-service.initialize()
-
-# Mantén el servicio en ejecución (por ejemplo, con un loop infinito)
-while True:
-    pass
+            # Close the connection
+            connection.close()
+    except socket.error as e:
+        print("Error en el servidor:", e)
+    finally:
+        # Close the socket
+        sock.close()
