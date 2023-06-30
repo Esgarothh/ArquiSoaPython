@@ -3,7 +3,7 @@ import psycopg2
 from decimal import Decimal
 
 try:
-    conn = psycopg2.connect(user="postgres", password="benjads1", database="mydatabase", host="localhost", port="5432")
+    conn = psycopg2.connect(user="postgres", password="xxx", database="mydatabase", host="localhost", port="5432")
     print("Conectado a la db")
     cur = conn.cursor()
 except:
